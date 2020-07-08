@@ -1,5 +1,5 @@
 # github-solid
-Convert Github (octakit) data to Solid
+Convert Github (Octokit) data to Solid
 
 Possible goals in order of difficulty and value:
 
@@ -7,9 +7,7 @@ Possible goals in order of difficulty and value:
 
 - To provide a function which fetches a part of a solid virtal pod which in fact is mapped from the state of github
 
-- To provdie real-time sync between the state of solid 
+- To provdie real-time sync between the state of solid
 
 
-See for example: [Octakit documentation](https://octokit.github.io/rest.js/v18#projects-list-cards)
-
-
+See for example: [Octokit documentation](https://octokit.github.io/rest.js/v18#projects-list-cards)
