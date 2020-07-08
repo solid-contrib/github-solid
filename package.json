@@ -1,0 +1,37 @@
+{
+  "name": "github-solid",
+  "description": "command line utility to move data from github API to solid",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tim Berners-Lee",
+    "email": "timbl@w3.org"
+  },
+  "maintainers": [],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solid/github-solid"
+  },
+  "homepage": "http://github.com/solid/github-solid",
+  "bugs": "http://github.com/solid/github-solid/issues",
+  "dependencies": {
+    "debug": ">=2.6.9",
+    "dotenv": "^8.0.0",
+    "@octokit/rest": "*",
+    "rdflib": "^0.20.1",
+    "solid-namespace": "^0.2.0",
+    "yargs": "^13.2.4"
+  },
+  "bin": {
+    "github-solid": "./bin/github-solid"
+  },
+  "devDependencies": {
+    "fs-extra": "^4.0.2",
+    "mocha": "^4.0.1",
+    "mock-http-server": "^0.2.0"
+  },
+  "main": "index.js",
+  "scripts": {
+    "extract": "node --experimental-modules github-solid.mjs"
+  }
+}
