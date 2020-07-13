@@ -15,9 +15,10 @@
   "homepage": "http://github.com/solid/github-solid",
   "bugs": "http://github.com/solid/github-solid/issues",
   "dependencies": {
+    "@octokit/rest": "*",
     "debug": ">=2.6.9",
     "dotenv": "^8.0.0",
-    "@octokit/rest": "*",
+    "eslint": "^7.4.0",
     "rdflib": "^0.20.1",
     "solid-namespace": "^0.2.0",
     "yargs": "^13.2.4"
