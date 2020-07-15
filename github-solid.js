@@ -49,15 +49,6 @@ const ns = solidNamespace($rdf)
 if (!ns.wf) {
   ns.wf = new $rdf.Namespace('http://www.w3.org/2005/01/wf/flow#') //  @@ sheck why necessary
 }
-// see https://www.npmjs.com/package/node-github
-
-// console.log('GITTER_TOKEN ' + GITTER_TOKEN)
-// const github = new Github(GITTER_TOKEN)
-
-
-// import readline from 'readline-promise';
-
-// const readLinePromise = require('readline-promise')
 const readline = require('readline')
 
 const rl = readline.createInterface({
@@ -133,6 +124,7 @@ async function solidObjectForGithubURI (githubURL, githubType) {
   }
   return solidObjectFor(githubObject, githubType)
 }
+
 function solidObjectFor (githubObject, githubType) {
   const id = encodeURIComponent(githubObject.id)
   const map = {
@@ -148,23 +140,6 @@ function solidObjectFor (githubObject, githubType) {
     throw new Error('Bad github type ' + githubType)
   }
 }
-
-///////////
-
-/* Test version of update
-*/
-
-/*
-async function update (ddd, sts) {
-  const doc = sts[0].why
-  // console.log('   Delete ' + ddd.length )
-  console.log('   Insert ' + sts.length + ' in ' + doc)
-  for (let i = 0; i < sts.length; i++) {
-    let st = sts[i]
-    console.log(`       ${i}: ${st.subject} ${st.predicate} ${st.object} .`)
-  }
-}
-*/
 
 /** Track github users
 */
@@ -257,89 +232,8 @@ async function authorFromGithub (fromUser, archiveBaseURI) {
 }
 
 
-/// /////////////////////////////  Do Project
+/// /////////////////////////////
 
-async function doProject (project, config) {
-  console.log(`\nDoing project ${project.id}:  ${project.name}`)
-  // console.log('@@ bare project: ' + JSON.stringify(project))
-  var githubProject
-  const solidTracker = trackerFromGithubProject(project, config)
-  const archiveBaseURI = archiveBaseURIFromGithubProject(project, config)
-
-  console.log('    solid tracker ' + solidTracker)
-
-  async function show () {
-    let name = project.oneToOne ? '@' + project.user.username : project.name
-    console.log(`     ${project.githubType}: ${name}`)
-  }
-
-  async function details () {
-    let name = project.oneToOne ? '@' + project.user.username : project.name
-    console.log(`${project.githubType}: ${name}`)
-    console.log(JSON.stringify(project))
-  }
-
-  async function initialize () {
-    const solidTracker = trackerFromGithubProject(project, config)
-    console.log('    solid tracker ' + solidTracker)
-    // Make the main chat tracker file
-    var newChatDoc = solidTracker.doc()
-    let already = await loadIfExists(newChatDoc)
-    if (!already) {
-      store.add(solidTracker, ns.rdf('type'), ns.meeting('LongChat'), newChatDoc)
-      store.add(solidTracker, ns.dc('title'), project.name + ' github chat archive', newChatDoc)
-      await putResource(newChatDoc)
-      console.log('    New chat tracker created. ' + solidTracker)
-      return false
-    } else {
-      console.log(`    Chat tracker doc ${solidTracker}already existed: ✅`)
-      return true
-    }
-  }
-
-  async function create() {
-    console.log('First make the solid chat object if necessary:')
-    await initialize()
-    console.log('Now first catchup  recent messages:')
-    var catchupDone = await catchup()
-    if (catchupDone) {
-      console.log('Initial catchup gave no messages, so no archive necessary.✅')
-      return null
-    }
-    console.log('Now extend the archive back hopefully all the way -- but check:')
-    let pickUpFrom = await extendArchiveBack()
-    if (pickUpFrom) {
-      console.log('Did NOT go all the way.   More archive sessions will be needed. ⚠️')
-    } else {
-      console.log('Did go all the way. You have the whole archive to date. ✅')
-    }
-    return pickUpFrom
-  }
-  // Body of doProject
-  if (command === 'show') {
-    await show()
-  } else if (command === 'details') {
-      await details()
-  } else if (command === 'archive') {
-    await extendArchiveBack()
-  } else if (command === 'catchup') {
-    await catchup()
-  } else if (command === 'stream') {
-    console.log('catching up to make sure we don\'t miss any when we stream')
-    var ok = await catchup()
-    if (!ok) {
-      console.error('catching up FAILED so NOT starting stream as we would get a gap!')
-      throw new Error('Not caught up. Cant stream.')
-    }
-    console.log('Catchup done. Now set up stream.')
-    await stream(store)
-  } else if (command === 'init') {
-    var already = await initialize()
-    // console.log('Solid tracker already there:' + already)
-  } else if (command === 'create') {
-    await create()
-  }
-}
 
 async function loadConfig () {
   console.log('Log into solid')
@@ -402,6 +296,7 @@ async function loadConfig () {
   return githubConfig
 }
 
+///////////////////////////////////////////////////////////////
 
 async function getListing (api, params) {
   console.log(`    Getting list with `)
@@ -446,12 +341,12 @@ templates['issue'] = {
   "number": 91,
   "title": {property: ns.dc('title'), valueType: 'string', example: "Removing unnecessary castings"},
 
-  "user": {property: ns.dct('creator'), valueType: 'user' }, // @@ check prop
+  "user": {property: ns.dct('creator'),  valueType: 'object', range: 'user'}, // @@ check prop
   "labels": [],
   "locked": { valueType: 'boolean', example: "false"},
   "state": { property: ns.rdf('type'), valueType: 'state', example: "closed"},
-  "assignee": { property: ns.wf('assignee'), valueType: '',exmaple: null},
-  "assignees": [], // @@ do these
+  "assignee": { property: ns.wf('assignee'), valueType: 'object', range: 'user', example: null},
+  "assignees": { property: ns.wf('assignee'), valueType: 'array', range: 'user', example: []}, // @@ check
   "milestone": null,
   "comments": 0,
   "created_at": {property: ns.dct('created'), valueType: 'dateTime', example: "2020-04-30T11:45:34Z"},
@@ -461,7 +356,7 @@ templates['issue'] = {
   "active_lock_reason": null,
   "pull_request": {property_no: ns.wf('attachment'), valueType_no: 'object', range: 'pull'},
   "body": { property: ns.wf('description'), valueType: 'string', example: "Relies on https://github.com/solid/solid-ui/pull/304"},
-  "closed_by": { valueType: 'object', range: 'user' },
+  "closed_by": { property: ns.wf('closedBy'), valueType: 'object', range: 'user' },
 }
 
 templates ['pull-no'] = {
@@ -482,7 +377,7 @@ templates['card'] = {
 
 // These are the ones for a card which is  a card for an issue:
 
-  "user": {property: ns.dct('creator'), valueType: 'user' }, // @@ check prop
+  "user": {property: ns.dct('author'),  valueType: 'object', range: 'user'}, // @@ check prop  diff with craetor?
   "labels": [],
   "locked": { valueType: 'boolean', example: "false"},
   "state": { property: ns.rdf('type'), valueType: 'state', example: "closed"},
@@ -855,7 +750,7 @@ async function loadGithubURI (githubURI) {
   const text = await res.text()
   // console.log('Issue text: '  + text)
   const issue = JSON.parse(text)
-  // console.log(` Github object: `  + JSON.stringify(issue, null, 4))
+  console.log(` Github object: `  + JSON.stringify(issue, null, 4))
   return issue
 }
 
@@ -863,10 +758,29 @@ async function loadAndimportGithubObject (githubType, solidTask, githubURI) {
 
   const issue = await loadGithubURI (githubURI)
   if (!issue) return // @@ about?
-  return importGithubObject (issue, githubType, solidTask)
+  return await importGithubObject (issue, githubType, solidTask)
 }
 
 async function importGithubObject (issue, githubType, solidTask) {
+
+  async function importNested (value, model) {
+    if (!model.range) {
+      throw new Error(`Error: Template '${githubType}' key ${key} has valueType "object" but no range`)
+    }
+    const githubTypeString = model.range
+    if (typeof value === 'object') {
+      if (!value.id) {
+        console.error('   ### Ooops object has no id:' + JSON.stringify(value))
+      }
+      result = solidObjectFor(value, githubTypeString)
+    } else {
+      throw "should not be here"
+      result = await solidObjectForGithubURI(value, githubTypeString)
+    }
+    console.log(`   new solid ${githubTypeString}: ${result}`)
+    await importGithubObject(value, model.range, result)
+    return
+  }
 
   const template = templates[githubType]
   console.log(`\n Importing ${githubType} to Solid ${solidTask}`)
@@ -882,6 +796,8 @@ async function importGithubObject (issue, githubType, solidTask) {
       // throw new Error(msg)
       continue
     }
+    if (!model.property) continue
+    const doc = solidTask.doc()
     if (model.valueType === 'state') {
       result = value === 'closed' ? ns.wf('Closed') : ns.wf('Open')
       console.log('    State result: ' + result)
@@ -895,32 +811,19 @@ async function importGithubObject (issue, githubType, solidTask) {
     } else if (model.valueType === 'dateTime') {
       result = new $rdf.Literal(value, null, ns.xsd('dateTime'))
     } else if (model.valueType === 'object') {
-      const githubTypeString = model.range
-      var newThing
-
-      if (typeof value === 'object') {
-        if (!value.id) {
-          console.error('   ### Ooops object has no id:' + JSON.stringify(value))
-        }
-        newThing = solidObjectFor(value, githubTypeString)
-      } else {
-        throw "should not be here"
-        newThing = solidObjectForGithubURI(value, githubTypeString)
+      await importNested (result, model)
+    } else if (model.valueType === 'array') {
+      for (const item of value) {
+        await importNested (item, model)
+        console.log(`  Found in array for ${solidTask}: ${key} ->  ${model.property} ${result} @ ${doc}`)
+        kb.add(solidTask, model.property, result, doc)
+        toBePut[doc.uri] = true
       }
-      console.log(`   new solid ${githubTypeString}: ${newThing}`)
-      await importGithubObject(value, model.range, newThing)
+      continue
     }
-    if (model.property) {
-      const doc = solidTask.doc()
-      console.log(`  Found ${key} ->  ${model.property} ${result}`)
-      kb.add(solidTask, model.property, result, doc)
-      toBePut[doc.uri] = true
-
-      if (typeof result === 'object' && result.uri && !result.doc().sameTerm(solidTask.doc())) {
-         // console.log(` Double link ${solidTask} and ${result}`)
-         // kb.add(solidTask, model.property, result, result.doc())
-      } // double
-    } // property
+    console.log(`  Found ${key} ->  ${model.property} ${result}`)
+    kb.add(solidTask, model.property, result, doc)
+    toBePut[doc.uri] = true
   }
 }
 
@@ -932,8 +835,29 @@ async function go () {
   const orgs = await octokit.orgs.list()
   console.log('orgs: ' + orgs.length)
   */
-  var owner = 'solid'
+  var owner = 'solid' // owner of project
+  var org = 'solid'
   var repo = 'mashlib'
+
+  const orgMembers = await getListing(octokit.orgs.listMembers, {org: owner})
+  console.log(`orgMembers ${orgMembers.length}`)
+  console.log(' Org members: ' + JSON.stringify(orgMembers, null, 4))
+
+  // Make a SOlid group of the members of the org
+  const orgMemberGroup = kb.sym(`${archiveBaseURI}${org}/Membership.ttl#group`)
+  kb.add(orgMemberGroup, ns.rdf('type'), ns.vcard('Group'), orgMemberGroup.doc())
+  kb.add(orgMemberGroup, ns.vcard('fn'), 'Members of ' + org, orgMemberGroup.doc())
+  for (const member of orgMembers) {
+    solidPerson = solidObjectFor(member, 'user')
+    await importGithubObject(member, 'user', solidPerson)
+    kb.add(orgMemberGroup, ns.vcard('hasMember'), solidPerson, orgMemberGroup.doc())
+    if (member.login) {
+      kb.add(solidPerson, ns.vcard('fn'), member.login, orgMemberGroup.doc())
+    }
+  }
+  toBePut[orgMemberGroup.doc().uri] = true
+  console.log(`${org} membership group ${orgMemberGroup.uri} has ${orgMembers.length} members`)
+
 
   const issues = await getListing(octokit.issues.listForRepo, {owner, repo})
   console.log(`issues ${issues.length}`)
@@ -949,17 +873,20 @@ async function go () {
     const columns_url = project.columns_url
     const creator = project.creator
 
-
     const solidTracker = solidObjectFor(project, 'tracker')
-
+    const doc = solidTracker.doc()
     kb.add(solidTracker, ns.rdf('type'), ns.wf('Tracker'), solidTracker.doc())
     kb.add(solidTracker, ns.dc('title'), "Tracker for github board", solidTracker.doc())
-    kb.add(solidTracker, ns.wf('issueClass'), ns.wf('Task'), solidTracker.doc()) // @@ say
+    kb.add(solidTracker, ns.wf('issueClass'), ns.wf('Task'), doc) // @@ say
+    kb.add(solidTracker, ns.wf('assigneeGroup'), orgMemberGroup, doc)
 
     const stateStore = kb.sym(solidTracker.dir().uri + 'state.ttl')
     console.log('  stateStore ' + stateStore)
     kb.add(solidTracker, ns.wf('stateStore'), stateStore, solidTracker.doc())
     kb.add(solidTracker, ns.wf('stateStore'), stateStore, stateStore) // double
+
+    kb.add(solidTracker, ns.wf('assigneeClass'), ns.foaf('Person'), solidTracker.doc()) // @@ set to people in the meeting?
+
     toBePut[stateStore.uri] = true
     toBePut[solidTracker.doc().uri] = true
 
@@ -986,8 +913,6 @@ async function go () {
 
     await importGithubObject(project, 'project', solidClassification) // import from template
 
-
-
     const cols = await octokit.paginate(octokit.projects.listColumns, {project_id: project.id})
     console.log(`  Columns ${cols.length}`)
     for (var col of cols) {
@@ -1008,22 +933,31 @@ async function go () {
        const cards = await octokit.paginate(octokit.projects.listCards, {column_id: column.id})
        for (var card of cards) {
          // Do card
-         console.log('\n  Card: ') //  + JSON.stringify(card, null, 4)
+         // console.log('\n  Card: '+ JSON.stringify(card, null, 4)) //
          const solidTask = solidObjectFor(card, 'card')
          const doc = solidTask.doc()
          kb.add(solidTask, ns.rdf('type'), ns.wf('Task'), stateStore)
-         kb.add(solidTask, ns.rdf('type'), ns.wf('Open'), stateStore) // @@ map some to closed
+         if (!card.state) { // Notes don't have an explicit state
+           kb.add(solidTask, ns.rdf('type'), ns.wf('Open'), stateStore) // @@ map some columns to closed?
+         }
          kb.add(solidTask, ns.rdf('type'), solidCategory, stateStore)
          kb.add(solidTask, ns.wf('tracker'), solidTracker, stateStore)
 
          await importGithubObject (card, 'card', solidTask)
          // await importGithubObject (card, 'issue', solidTask) // may have both or either shape
 
+         if (card.assignee) {
+           console.log('----->  Assignee: ' + JSON.stringify(card.assignee))
+         }
+         if (card.assignees && card.assignees.length > 0) {
+           console.log('=====>  Assignees: ' + JSON.stringify(card.assignees))
+         }
+
          if (card.note && !kb.any(solidTask, ns.dc('title'), null, stateStore)) {
            kb.add(solidTask, ns.dc('title'), card.note.slice(0, 80), stateStore)
            // kb.add(solidTask, ns.wf('description'), card.note, stateStore)
          } else if (card.content_url){ // Card is not a note it is an issue
-             await loadAndimportGithubObject('card', solidTask, card.content_url)
+             await loadAndimportGithubObject('issue', solidTask, card.content_url)
          } else {
            console.warn('\n @@ No note, so what to use as label for this?', JSON.stringify(card, null, 4))
          }
@@ -1033,6 +967,8 @@ async function go () {
          const Creator = card.creator
          // @@ person
        }
+       console.log('Tracker at ' + solidTracker)
+
     }
   }
 
